@@ -1,32 +1,205 @@
 <!doctype html>
-<html class="no-js" lang="en">
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="description" content="AI Fashion Designer app">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Your AI Fashion Designer</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Fashion Stylist</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f7f7f7;
+      color: #222;
+    }
 
-  <link rel="stylesheet" href="css/font.css">
-  <link rel="stylesheet" href="css/main.css">
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 24px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
 
-  <script src="js/vendor/modernizr.js"></script>
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    p {
+      text-align: center;
+      color: #555;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 12px;
+      margin: 24px 0;
+    }
+
+    input {
+      flex: 1;
+      padding: 14px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    button {
+      padding: 14px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: black;
+      color: white;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    #status {
+      margin-top: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    #results {
+      margin-top: 30px;
+    }
+
+    .suggestions {
+      margin-bottom: 30px;
+    }
+
+    .suggestions ul {
+      padding-left: 20px;
+    }
+
+    .images {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .image-card {
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .image-card img {
+      max-width: 100%;
+      border-radius: 8px;
+    }
+
+    .label {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #444;
+    }
+  </style>
 </head>
-<body class="page-apply">
+<body>
+  <div class="container">
+    <h1>AI Fashion Stylist</h1>
+    <p>Describe one clothing item and get 3 styling suggestions with generated images.</p>
 
-  <header class="site-header">
-    <div class="site-logo">AI Designer</div>
-
-    <div class="row column medium-8 large-6 xlarge-5 xxlarge-4">
-      <h1 class="title">Get Styled Today!</h1>
+    <div class="input-group">
+      <input
+        id="clothingInput"
+        type="text"
+        placeholder="Example: a navy blue wool blazer"
+      />
+      <button id="submitBtn">Get Suggestions</button>
     </div>
-  </header>
 
-  <section class="content">
-    <div class="row column medium-10 large-7 xlarge-5">
-      <p>This is your personal AI designer!</p>
-      <p>Upload any clothing item to get different style suggestions.</p>
-    </div>
-  </section>
+    <div id="status"></div>
 
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const API_URL = "PASTE_YOUR_LAMBDA_FUNCTION_URL_HERE";
+
+    const submitBtn = document.getElementById("submitBtn");
+    const clothingInput = document.getElementById("clothingInput");
+    const statusEl = document.getElementById("status");
+    const resultsEl = document.getElementById("results");
+
+    async function getSuggestions() {
+      const userInput = clothingInput.value.trim();
+
+      if (!userInput) {
+        statusEl.textContent = "Please enter a clothing item.";
+        resultsEl.innerHTML = "";
+        return;
+      }
+
+      statusEl.textContent = "Loading...";
+      resultsEl.innerHTML = "";
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            input: userInput
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Something went wrong.");
+        }
+
+        statusEl.textContent = "Done!";
+
+        let suggestionsHtml = `
+          <div class="suggestions">
+            <h2>Suggestions</h2>
+            <ul>
+              ${data.suggestions.map(item => `<li>${item}</li>`).join("")}
+            </ul>
+          </div>
+        `;
+
+        let imagesHtml = `
+          <div>
+            <h2>Generated Images</h2>
+            <div class="images">
+              ${data.images.map((img, index) => `
+                <div class="image-card">
+                  <img src="data:image/png;base64,${img}" alt="Fashion suggestion ${index + 1}">
+                  <div class="label">${data.suggestions[index] || `Suggestion ${index + 1}`}</div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+
+        resultsEl.innerHTML = suggestionsHtml + imagesHtml;
+
+      } catch (error) {
+        statusEl.textContent = "Error";
+        resultsEl.innerHTML = `<p>${error.message}</p>`;
+      }
+    }
+
+    submitBtn.addEventListener("click", getSuggestions);
+
+    clothingInput.addEventListener("keypress", function(event) {
+      if (event.key === "Enter") {
+        getSuggestions();
+      }
+    });
+  </script>
 </body>
 </html>
